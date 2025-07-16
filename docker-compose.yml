@@ -32,6 +32,18 @@ services:
       - video_network
     restart: unless-stopped
 
+  frontend:
+    build: ./frontend
+    ports:
+      - "3000:3000"
+    environment:
+      - REACT_APP_API_URL=http://localhost:8000
+    depends_on:
+      - video_monitor
+    networks:
+      - video_network
+    restart: unless-stopped
+
   redis:
     image: redis:7-alpine
     ports:
