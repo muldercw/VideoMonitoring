@@ -1,0 +1,47 @@
+version: '3.8'
+
+services:
+  timescaledb:
+    image: timescale/timescaledb:latest-pg14
+    environment:
+      POSTGRES_DB: video_monitoring
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: password
+      TIMESCALEDB_TELEMETRY: 'off'
+    ports:
+      - "5432:5432"
+    volumes:
+      - timescale_data:/var/lib/postgresql/data
+      - ./sql/init.sql:/docker-entrypoint-initdb.d/init.sql
+    networks:
+      - video_network
+
+  video_monitor:
+    build: .
+    depends_on:
+      - timescaledb
+    ports:
+      - "8000:8000"
+    environment:
+      - DATABASE_URL=postgresql://postgres:password@timescaledb:5432/video_monitoring
+      - PYTHONUNBUFFERED=1
+    volumes:
+      - ./videos:/app/videos
+      - ./logs:/app/logs
+    networks:
+      - video_network
+    restart: unless-stopped
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    networks:
+      - video_network
+
+volumes:
+  timescale_data:
+
+networks:
+  video_network:
+    driver: bridge
