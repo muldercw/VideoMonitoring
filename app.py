@@ -1,5 +1,6 @@
 from fastapi import FastAPI, HTTPException, Depends, BackgroundTasks
 from fastapi.responses import JSONResponse
+from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
 from typing import List, Optional
 import logging
@@ -17,6 +18,15 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 app = FastAPI(title="Video Monitoring System", version="1.0.0")
+
+# Add CORS middleware
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # Allow all origins for development
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 # Initialize stream manager
 stream_manager = StreamManager()
@@ -103,12 +113,16 @@ async def create_stream(stream_data: StreamCreate, db: Session = Depends(get_db)
         )
         
         if not success:
-            raise HTTPException(status_code=400, detail="Failed to initialize stream")
+            logger.warning(f"Failed to initialize stream manager for stream {new_stream.stream_id}")
+            # Don't fail the request, just log the warning
         
         return new_stream
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"Error creating stream: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        db.rollback()
+        raise HTTPException(status_code=500, detail=f"Failed to create stream: {str(e)}")
 
 @app.get("/streams", response_model=List[StreamResponse])
 async def get_streams(db: Session = Depends(get_db)):

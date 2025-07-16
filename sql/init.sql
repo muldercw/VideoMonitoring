@@ -20,7 +20,7 @@ CREATE TABLE video_events (
     event_type VARCHAR(100) NOT NULL,
     confidence FLOAT,
     bounding_box JSONB,
-    metadata JSONB,
+    event_metadata JSONB,
     frame_path VARCHAR(500),
     created_at TIMESTAMP DEFAULT NOW()
 );
