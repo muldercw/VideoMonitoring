@@ -30,6 +30,7 @@ class VideoEvent(Base):
     bounding_box = Column(JSON)
     event_metadata = Column(JSON)
     frame_path = Column(String(500))
+    clip_path = Column(String(500))
     created_at = Column(DateTime, default=datetime.utcnow)
     
     stream = relationship("VideoStream", back_populates="events")

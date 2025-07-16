@@ -1,6 +1,6 @@
 import React from 'react';
 
-const StreamCard = ({ stream, onStart, onStop, onDelete, onView, viewMode, isLoading }) => {
+const StreamCard = ({ stream, onStart, onStop, onDelete, onView, onWatch, viewMode, isLoading }) => {
   const isActive = stream.is_active;
   const streamTypeIcons = {
     rtsp: '📡',
@@ -30,6 +30,13 @@ const StreamCard = ({ stream, onStart, onStop, onDelete, onView, viewMode, isLoa
         <div className="stream-actions">
           <button className="btn btn-secondary" onClick={onView}>
             View Details
+          </button>
+          <button 
+            className="btn btn-info" 
+            onClick={onWatch}
+            disabled={isLoading}
+          >
+            📺 Watch
           </button>
           {isActive ? (
             <button 
@@ -85,6 +92,13 @@ const StreamCard = ({ stream, onStart, onStop, onDelete, onView, viewMode, isLoa
       <div className="stream-actions">
         <button className="btn btn-secondary" onClick={onView}>
           View Details
+        </button>
+        <button 
+          className="btn btn-info" 
+          onClick={onWatch}
+          disabled={isLoading}
+        >
+          📺 Watch
         </button>
         <div className="action-buttons">
           {isActive ? (

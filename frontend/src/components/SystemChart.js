@@ -6,18 +6,21 @@ const SystemChart = ({ data, loading }) => {
     return <div className="loading">Loading metrics...</div>;
   }
 
-  if (!data || data.length === 0) {
+  // Comprehensive data validation
+  if (!data || !Array.isArray(data) || data.length === 0) {
     return <div className="no-data">No metrics data available</div>;
   }
 
-  // Transform data for the chart
-  const chartData = data.map(item => ({
-    time: new Date(item.timestamp).toLocaleTimeString(),
-    cpu: item.cpu_usage,
-    memory: item.memory_usage,
-    disk: item.disk_usage,
-    activeStreams: item.active_streams || 0
-  }));
+  // Transform data for the chart with safety checks
+  const chartData = data
+    .filter(item => item && typeof item === 'object' && item.timestamp)
+    .map(item => ({
+      time: new Date(item.timestamp).toLocaleTimeString(),
+      cpu: Number(item.cpu_usage) || 0,
+      memory: Number(item.memory_usage) || 0,
+      disk: Number(item.disk_usage) || 0,
+      activeStreams: Number(item.active_streams) || 0
+    }));
 
   return (
     <div className="chart-container">
@@ -25,7 +28,8 @@ const SystemChart = ({ data, loading }) => {
         <LineChart data={chartData}>
           <CartesianGrid strokeDasharray="3 3" />
           <XAxis dataKey="time" />
-          <YAxis />
+          <YAxis yAxisId="left" />
+          <YAxis yAxisId="right" orientation="right" />
           <Tooltip />
           <Legend />
           <Line 
@@ -34,6 +38,7 @@ const SystemChart = ({ data, loading }) => {
             stroke="#ff7300" 
             name="CPU %" 
             strokeWidth={2}
+            yAxisId="left"
           />
           <Line 
             type="monotone" 
@@ -41,6 +46,7 @@ const SystemChart = ({ data, loading }) => {
             stroke="#8884d8" 
             name="Memory %" 
             strokeWidth={2}
+            yAxisId="left"
           />
           <Line 
             type="monotone" 
@@ -48,6 +54,7 @@ const SystemChart = ({ data, loading }) => {
             stroke="#82ca9d" 
             name="Disk %" 
             strokeWidth={2}
+            yAxisId="left"
           />
           <Line 
             type="monotone" 

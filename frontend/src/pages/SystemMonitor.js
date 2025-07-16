@@ -4,7 +4,7 @@ import SystemChart from '../components/SystemChart';
 
 const SystemMonitor = () => {
   const { data: systemStatus, isLoading: statusLoading } = useSystemStatus();
-  const { data: metrics, isLoading: metricsLoading } = useSystemMetrics(24);
+  const { data: metrics, isLoading: metricsLoading, error: metricsError } = useSystemMetrics(24);
 
   const getSystemHealth = () => {
     if (!metrics || metrics.length === 0) return 'Unknown';
@@ -150,7 +150,11 @@ const SystemMonitor = () => {
       <div className="charts-section">
         <div className="card">
           <h3>System Performance (24 Hours)</h3>
-          <SystemChart data={metrics} loading={metricsLoading} />
+          {metricsError ? (
+            <div className="error">Error loading metrics: {metricsError.message}</div>
+          ) : (
+            <SystemChart data={metrics} loading={metricsLoading} />
+          )}
         </div>
       </div>
 

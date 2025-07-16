@@ -1,5 +1,5 @@
 from fastapi import FastAPI, HTTPException, Depends, BackgroundTasks
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, StreamingResponse
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
 from typing import List, Optional
@@ -7,6 +7,9 @@ import logging
 from datetime import datetime, timedelta
 import uvicorn
 import os
+import cv2
+import io
+import time
 
 from src.database import get_db, init_db
 from src.models import VideoStream, VideoEvent, VideoAnalytics, SystemMetrics
@@ -55,6 +58,7 @@ class EventResponse(BaseModel):
     bounding_box: Optional[dict]
     event_metadata: Optional[dict]
     frame_path: Optional[str]
+    clip_path: Optional[str]
 
 class AnalyticsResponse(BaseModel):
     analytics_id: int
@@ -296,6 +300,152 @@ async def get_dashboard_summary(db: Session = Depends(get_db)):
         }
     except Exception as e:
         logger.error(f"Error fetching dashboard summary: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+# Video streaming endpoints
+def generate_video_stream(stream_url: str, stream_type: str):
+    """Generate video frames for streaming"""
+    cap = None
+    try:
+        if stream_type == 'webcam':
+            # For webcam, convert string to int if it's a number
+            if stream_url.isdigit():
+                cap = cv2.VideoCapture(int(stream_url))
+            else:
+                cap = cv2.VideoCapture(stream_url)
+        else:
+            cap = cv2.VideoCapture(stream_url)
+        
+        if not cap.isOpened():
+            logger.error(f"Failed to open video stream: {stream_url}")
+            return
+        
+        while True:
+            ret, frame = cap.read()
+            if not ret:
+                break
+            
+            # Encode frame as JPEG
+            ret, buffer = cv2.imencode('.jpg', frame, [cv2.IMWRITE_JPEG_QUALITY, 50])
+            if not ret:
+                continue
+            
+            # Convert to bytes
+            frame_bytes = buffer.tobytes()
+            
+            # Create multipart response
+            yield (b'--frame\r\n'
+                   b'Content-Type: image/jpeg\r\n\r\n' + frame_bytes + b'\r\n')
+            
+            # Small delay to control frame rate
+            time.sleep(0.033)  # ~30 FPS
+    
+    except Exception as e:
+        logger.error(f"Error in video stream generation: {e}")
+    finally:
+        if cap:
+            cap.release()
+
+@app.get("/api/streams/{stream_id}/video")
+async def stream_video(stream_id: int, db: Session = Depends(get_db)):
+    """Stream video from a specific stream"""
+    try:
+        # Get stream info from database
+        stream = db.query(VideoStream).filter(VideoStream.stream_id == stream_id).first()
+        if not stream:
+            raise HTTPException(status_code=404, detail="Stream not found")
+        
+        # For HTTP streams, we can redirect directly
+        if stream.stream_type == 'http' and stream.stream_url.startswith('http'):
+            # For HTTP video files, we can serve them directly
+            return StreamingResponse(
+                generate_video_stream(stream.stream_url, stream.stream_type),
+                media_type="multipart/x-mixed-replace; boundary=frame"
+            )
+        else:
+            # For other stream types, use OpenCV to process
+            return StreamingResponse(
+                generate_video_stream(stream.stream_url, stream.stream_type),
+                media_type="multipart/x-mixed-replace; boundary=frame"
+            )
+    
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error streaming video for stream {stream_id}: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/api/streams/{stream_id}/hls/playlist.m3u8")
+async def get_hls_playlist(stream_id: int, db: Session = Depends(get_db)):
+    """Get HLS playlist for RTSP streams (placeholder)"""
+    try:
+        # Get stream info from database
+        stream = db.query(VideoStream).filter(VideoStream.stream_id == stream_id).first()
+        if not stream:
+            raise HTTPException(status_code=404, detail="Stream not found")
+        
+        # This is a placeholder - in production, you'd use FFmpeg to convert RTSP to HLS
+        hls_playlist = f"""#EXTM3U
+#EXT-X-VERSION:3
+#EXT-X-TARGETDURATION:10
+#EXT-X-MEDIA-SEQUENCE:0
+#EXTINF:10.0,
+/api/streams/{stream_id}/video
+#EXT-X-ENDLIST"""
+        
+        return StreamingResponse(
+            io.StringIO(hls_playlist),
+            media_type="application/vnd.apple.mpegurl"
+        )
+    
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error generating HLS playlist for stream {stream_id}: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/api/frames/{frame_path:path}")
+async def serve_frame(frame_path: str):
+    """Serve event frame images"""
+    try:
+        file_path = os.path.join(frame_path)
+        if not os.path.exists(file_path):
+            raise HTTPException(status_code=404, detail="Frame not found")
+        
+        with open(file_path, "rb") as f:
+            content = f.read()
+            
+        return StreamingResponse(
+            io.BytesIO(content),
+            media_type="image/jpeg"
+        )
+    
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error serving frame {frame_path}: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/api/clips/{clip_path:path}")
+async def serve_clip(clip_path: str):
+    """Serve object clip images"""
+    try:
+        file_path = os.path.join(clip_path)
+        if not os.path.exists(file_path):
+            raise HTTPException(status_code=404, detail="Clip not found")
+        
+        with open(file_path, "rb") as f:
+            content = f.read()
+            
+        return StreamingResponse(
+            io.BytesIO(content),
+            media_type="image/jpeg"
+        )
+    
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error serving clip {clip_path}: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 if __name__ == "__main__":

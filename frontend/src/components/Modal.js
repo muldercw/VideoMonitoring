@@ -22,6 +22,7 @@ const Modal = ({ title, children, onClose, size = 'medium' }) => {
       <div 
         className={`modal-content modal-${size}`}
         onClick={(e) => e.stopPropagation()}
+        style={size === 'large' ? { maxWidth: '90vw', maxHeight: '90vh' } : {}}
       >
         <div className="modal-header">
           <h3 className="modal-title">{title}</h3>

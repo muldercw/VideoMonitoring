@@ -3,10 +3,12 @@ import { useStreams, useCreateStream, useStartStream, useStopStream, useDeleteSt
 import StreamForm from '../components/StreamForm';
 import StreamCard from '../components/StreamCard';
 import Modal from '../components/Modal';
+import VideoPlayer from '../components/VideoPlayer';
 
 const Streams = () => {
   const [showForm, setShowForm] = useState(false);
   const [selectedStream, setSelectedStream] = useState(null);
+  const [watchingStream, setWatchingStream] = useState(null);
   const [viewMode, setViewMode] = useState('grid'); // 'grid' or 'list'
 
   const { data: streams, isLoading, error } = useStreams();
@@ -55,7 +57,15 @@ const Streams = () => {
   }
 
   if (error) {
-    return <div className="error">Failed to load streams: {error.message}</div>;
+    return (
+      <div className="container">
+        <div className="page-header">
+          <h1>Video Streams</h1>
+          <p>Manage your video streams and monitoring sources</p>
+        </div>
+        <div className="error">Failed to load streams: {error.message}</div>
+      </div>
+    );
   }
 
   return (
@@ -111,6 +121,7 @@ const Streams = () => {
               onStop={() => handleStopStream(stream.stream_id)}
               onDelete={() => handleDeleteStream(stream.stream_id)}
               onView={() => setSelectedStream(stream)}
+              onWatch={() => setWatchingStream(stream)}
               viewMode={viewMode}
               isLoading={
                 startStreamMutation.isLoading || 
@@ -172,6 +183,22 @@ const Streams = () => {
               <span>{new Date(selectedStream.updated_at).toLocaleString()}</span>
             </div>
           </div>
+        </Modal>
+      )}
+
+      {watchingStream && (
+        <Modal
+          title="Video Player"
+          onClose={() => setWatchingStream(null)}
+          size="large"
+        >
+          <VideoPlayer
+            streamId={watchingStream.stream_id}
+            streamUrl={watchingStream.stream_url}
+            streamType={watchingStream.stream_type}
+            streamName={watchingStream.stream_name}
+            onClose={() => setWatchingStream(null)}
+          />
         </Modal>
       )}
     </div>

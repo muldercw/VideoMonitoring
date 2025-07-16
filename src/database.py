@@ -7,15 +7,12 @@ import logging
 
 logger = logging.getLogger(__name__)
 
-DATABASE_URL = os.getenv("DATABASE_URL", "postgresql://postgres:password@localhost:5432/video_monitoring")
+DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///video_monitoring.db")
 
 engine = create_engine(
     DATABASE_URL,
-    pool_pre_ping=True,
-    pool_recycle=300,
-    pool_size=10,
-    max_overflow=20,
-    connect_args={"connect_timeout": 10},
+    poolclass=StaticPool,
+    connect_args={"check_same_thread": False} if "sqlite" in DATABASE_URL else {},
     echo=False
 )
 

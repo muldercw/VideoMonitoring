@@ -3,7 +3,10 @@ import { useQuery } from 'react-query';
 import { apiEndpoints } from '../utils/api';
 
 const RecentEvents = () => {
-  const { data: streams } = useQuery('streams', apiEndpoints.getStreams);
+  const { data: streams } = useQuery('streams', async () => {
+    const response = await apiEndpoints.getStreams();
+    return response.data;
+  });
   
   // Get recent events from all streams
   const { data: allEvents, isLoading } = useQuery(

@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test Frontend API Connection</title>
+</head>
+<body>
+    <h1>Testing API Connection</h1>
+    <button onclick="testAPI()">Test API Connection</button>
+    <div id="result"></div>
+
+    <script>
+        async function testAPI() {
+            const resultDiv = document.getElementById('result');
+            resultDiv.innerHTML = 'Testing...';
+            
+            try {
+                // Test the streams endpoint
+                const response = await fetch('http://localhost:8000/streams');
+                const data = await response.json();
+                
+                resultDiv.innerHTML = `
+                    <h3>Success!</h3>
+                    <p>Found ${data.length} streams:</p>
+                    <pre>${JSON.stringify(data, null, 2)}</pre>
+                `;
+            } catch (error) {
+                resultDiv.innerHTML = `
+                    <h3>Error!</h3>
+                    <p>Failed to fetch streams: ${error.message}</p>
+                `;
+            }
+        }
+    </script>
+</body>
+</html>

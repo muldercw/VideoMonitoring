@@ -7,7 +7,7 @@ import RecentEvents from '../components/RecentEvents';
 const Dashboard = () => {
   const { data: summary, isLoading: summaryLoading } = useDashboardSummary();
   const { data: systemStatus, isLoading: statusLoading } = useSystemStatus();
-  const { data: metrics, isLoading: metricsLoading } = useSystemMetrics(1);
+  const { data: metrics, isLoading: metricsLoading, error: metricsError } = useSystemMetrics(1);
 
   if (summaryLoading || statusLoading) {
     return <div className="loading">Loading dashboard...</div>;
@@ -50,7 +50,11 @@ const Dashboard = () => {
       <div className="grid grid-2">
         <div className="card">
           <h3>System Performance</h3>
-          <SystemChart data={metrics} loading={metricsLoading} />
+          {metricsError ? (
+            <div className="error">Error loading metrics: {metricsError.message}</div>
+          ) : (
+            <SystemChart data={metrics} loading={metricsLoading} />
+          )}
         </div>
         
         <div className="card">

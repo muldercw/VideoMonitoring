@@ -7,7 +7,7 @@ const Analytics = () => {
   const [timeRange, setTimeRange] = useState(24);
 
   const { data: streams, isLoading: streamsLoading } = useStreams();
-  const { data: analytics, isLoading: analyticsLoading } = useStreamAnalytics(
+  const { data: analytics, isLoading: analyticsLoading, error: analyticsError } = useStreamAnalytics(
     selectedStream ? parseInt(selectedStream) : null,
     timeRange
   );
@@ -59,10 +59,30 @@ const Analytics = () => {
 
   if (!streams || streams.length === 0) {
     return (
-      <div className="empty-state">
-        <div className="empty-icon">📈</div>
-        <h3>No streams available</h3>
-        <p>Add video streams to view analytics</p>
+      <div className="container">
+        <div className="page-header">
+          <h1>Analytics</h1>
+          <p>Performance metrics and insights for your video streams</p>
+        </div>
+        <div className="empty-state">
+          <div className="empty-icon">📈</div>
+          <h3>No streams available</h3>
+          <p>Add video streams to view analytics</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (analyticsError) {
+    return (
+      <div className="container">
+        <div className="page-header">
+          <h1>Analytics</h1>
+          <p>Performance metrics and insights for your video streams</p>
+        </div>
+        <div className="error">
+          Failed to load analytics: {analyticsError.message}
+        </div>
       </div>
     );
   }

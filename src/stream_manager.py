@@ -211,22 +211,36 @@ class StreamManager:
             
             db = SessionLocal()
             for obj in analytics['objects']:
+                # Create specific event type for different objects
+                object_type = obj['type']
+                event_type = f"{object_type}_detected"
+                
+                # Generate unique event ID for the clip filename
+                event_id = f"{stream_id}_{int(time.time() * 1000)}"
+                
+                # Save object clip
+                clip_path = processor.save_object_clip(frame, obj['bounding_box'], object_type, event_id)
+                
                 event = VideoEvent(
                     stream_id=stream_id,
-                    event_type="object_detected",
+                    event_type=event_type,
                     confidence=obj['confidence'],
                     bounding_box=obj['bounding_box'],
                     event_metadata={
-                        'object_type': obj['type'],
-                        'area': obj['area']
+                        'object_type': object_type,
+                        'area': obj['area'],
+                        'class_id': obj.get('class_id', -1),
+                        'detection_method': obj.get('detection_method', 'opencv')
                     },
-                    frame_path=frame_path
+                    frame_path=frame_path,
+                    clip_path=clip_path
                 )
                 db.add(event)
             db.commit()
             db.close()
             
-            logger.info(f"Object events recorded for stream {stream_id}")
+            detected_objects = [obj['type'] for obj in analytics['objects']]
+            logger.info(f"Object events recorded for stream {stream_id}: {detected_objects}")
         except Exception as e:
             logger.error(f"Error handling object events: {e}")
     

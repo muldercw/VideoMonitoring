@@ -3,7 +3,10 @@ import { apiEndpoints } from '../utils/api';
 
 // Custom hook for API queries
 export const useApiQuery = (key, queryFn, options = {}) => {
-  return useQuery(key, queryFn, {
+  return useQuery(key, async () => {
+    const response = await queryFn();
+    return response.data;
+  }, {
     staleTime: 30000,
     refetchInterval: 60000,
     ...options,
@@ -29,7 +32,11 @@ export const useDashboardSummary = () => {
 
 // Stream hooks
 export const useStreams = () => {
-  return useApiQuery('streams', apiEndpoints.getStreams, {
+  return useQuery('streams', async () => {
+    const response = await apiEndpoints.getStreams();
+    return response.data;
+  }, {
+    staleTime: 30000,
     refetchInterval: 30000,
   });
 };
@@ -64,7 +71,10 @@ export const useStreamEvents = (streamId, eventType = null, hours = 24) => {
 export const useCreateStream = () => {
   const queryClient = useQueryClient();
   
-  return useMutation(apiEndpoints.createStream, {
+  return useMutation(async (streamData) => {
+    const response = await apiEndpoints.createStream(streamData);
+    return response.data;
+  }, {
     onSuccess: () => {
       queryClient.invalidateQueries('streams');
       queryClient.invalidateQueries('dashboardSummary');
@@ -75,7 +85,10 @@ export const useCreateStream = () => {
 export const useStartStream = () => {
   const queryClient = useQueryClient();
   
-  return useMutation(apiEndpoints.startStream, {
+  return useMutation(async (streamId) => {
+    const response = await apiEndpoints.startStream(streamId);
+    return response.data;
+  }, {
     onSuccess: () => {
       queryClient.invalidateQueries('streams');
       queryClient.invalidateQueries('systemStatus');
@@ -87,7 +100,10 @@ export const useStartStream = () => {
 export const useStopStream = () => {
   const queryClient = useQueryClient();
   
-  return useMutation(apiEndpoints.stopStream, {
+  return useMutation(async (streamId) => {
+    const response = await apiEndpoints.stopStream(streamId);
+    return response.data;
+  }, {
     onSuccess: () => {
       queryClient.invalidateQueries('streams');
       queryClient.invalidateQueries('systemStatus');
@@ -99,7 +115,10 @@ export const useStopStream = () => {
 export const useDeleteStream = () => {
   const queryClient = useQueryClient();
   
-  return useMutation(apiEndpoints.deleteStream, {
+  return useMutation(async (streamId) => {
+    const response = await apiEndpoints.deleteStream(streamId);
+    return response.data;
+  }, {
     onSuccess: () => {
       queryClient.invalidateQueries('streams');
       queryClient.invalidateQueries('dashboardSummary');
