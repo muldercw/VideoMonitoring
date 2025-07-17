@@ -1,30 +1,31 @@
 # VideoMonitoring
 
-A comprehensive dockerized video monitoring system that leverages TimescaleDB for time-series data storage, Python for processing, and Docker for containerization.
+A comprehensive dockerized video monitoring system with object detection clipping functionality, SQLite for data storage, Python for processing, and Docker for containerization.
 
 ## Features
 
 - **Live Video Stream Processing**: Real-time video ingestion from multiple sources (RTSP, webcam, file)
 - **Motion Detection**: Automated motion detection with configurable sensitivity
-- **Object Detection**: Basic object detection and tracking
-- **Time-Series Analytics**: Powered by TimescaleDB for efficient time-series data storage
+- **Object Detection**: Basic object detection and tracking with clipping functionality
+- **Object Clipping**: Automatically extracts and saves detected objects as separate image clips
+- **React Frontend**: Modern web interface for stream management and event review
 - **REST API**: Full REST API for stream management and data retrieval
 - **System Monitoring**: Real-time system metrics and performance monitoring
-- **Event Storage**: Automatic event detection and frame capture
-- **Scalable Architecture**: Docker-based deployment with horizontal scaling support
+- **Event Storage**: Automatic event detection, frame capture, and object clipping
+- **Scalable Architecture**: Docker-based deployment with simplified SQLite storage
 
 ## Architecture
 
 ```
 ┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
-│   Video Streams │───▶│  Video Monitor  │───▶│   TimescaleDB   │
-│  (RTSP/Webcam)  │    │   (FastAPI)     │    │  (Time-Series)  │
+│   Video Streams │───▶│  Video Monitor  │───▶│     SQLite      │
+│  (RTSP/Webcam)  │    │   (FastAPI)     │    │   (Database)    │
 └─────────────────┘    └─────────────────┘    └─────────────────┘
-                                │                        │
-                                ▼                        ▼
+                                │                        
+                                ▼                        
                        ┌─────────────────┐    ┌─────────────────┐
-                       │      Redis      │    │  Frame Storage  │
-                       │   (Caching)     │    │   (Local/S3)    │
+                       │ React Frontend  │    │  File Storage   │
+                       │   (Port 3000)   │    │ (Frames/Clips)  │
                        └─────────────────┘    └─────────────────┘
 ```
 
@@ -41,7 +42,8 @@ A comprehensive dockerized video monitoring system that leverages TimescaleDB fo
    docker-compose up -d
    ```
 
-3. **Access the API**:
+3. **Access the application**:
+   - Frontend Interface: http://localhost:3000
    - API Documentation: http://localhost:8000/docs
    - Health Check: http://localhost:8000/health
 
@@ -58,19 +60,21 @@ A comprehensive dockerized video monitoring system that leverages TimescaleDB fo
 ### Analytics & Events
 - `GET /streams/{stream_id}/analytics` - Get stream analytics
 - `GET /streams/{stream_id}/events` - Get stream events
+- `GET /events` - Get all events with optional filtering
+- `GET /api/frames/{frame_path}` - Serve frame images
+- `GET /api/clips/{clip_path}` - Serve object clip images
 - `GET /system/metrics` - Get system metrics
 - `GET /dashboard/summary` - Get dashboard summary
 
 ## Configuration
 
-Copy `.env.example` to `.env` and configure:
+Environment variables can be configured in `docker-compose.yml`:
 
-```bash
-DATABASE_URL=postgresql://postgres:password@timescaledb:5432/video_monitoring
-REDIS_URL=redis://redis:6379
-LOG_LEVEL=INFO
-VIDEO_STORAGE_PATH=/app/videos
-MOTION_THRESHOLD=1000
+```yaml
+environment:
+  - DATABASE_URL=sqlite:///video_monitoring.db
+  - PYTHONUNBUFFERED=1
+  - REACT_APP_API_URL=http://localhost:8000
 ```
 
 ## Testing
@@ -87,11 +91,13 @@ python test_system.py
 # Install dependencies
 pip install -r requirements.txt
 
-# Start TimescaleDB
-docker-compose up -d timescaledb redis
-
-# Run the application
+# Run the backend
 python app.py
+
+# Run the frontend (in another terminal)
+cd frontend
+npm install
+npm start
 ```
 
 ### Adding New Features
@@ -104,15 +110,15 @@ python app.py
 
 ### Tables
 - `video_streams` - Stream configuration and metadata
-- `video_events` - Time-series event data (motion, objects)
+- `video_events` - Event data with object clips and frame paths
 - `video_analytics` - Performance and quality metrics
 - `system_metrics` - System resource usage
 
-### Hypertables
-All time-series data is stored in TimescaleDB hypertables for optimal performance:
-- Automatic partitioning by time
-- Continuous aggregates for analytics
-- Retention policies for data management
+### Object Clipping
+- Detected objects are automatically extracted from frames
+- Object clips are saved as individual image files
+- Clip paths are stored in the database for easy retrieval
+- Frontend displays clips in event cards for enhanced review
 
 ## Monitoring
 
@@ -129,6 +135,23 @@ The system provides comprehensive monitoring:
 3. Make your changes
 4. Add tests
 5. Submit a pull request
+
+## Screenshots
+
+### Dashboard Tab
+![Dashboard](Dashboard.png)
+
+### Streams Management Tab
+![Streams](Stream.png)
+
+### Events Review Tab
+![Events](Events.png)
+
+### Analytics Tab
+![Analytics](Analytics.png)
+
+### System Monitoring Tab
+![System](System.png)
 
 ## License
 
