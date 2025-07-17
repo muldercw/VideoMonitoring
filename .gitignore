@@ -47,8 +47,13 @@ videos/
 *.mov
 *.mkv
 *.jpg
-*.png
 *.jpeg
+# Allow documentation screenshots
+!Dashboard.png
+!Stream.png
+!Events.png
+!Analytics.png
+!System.png
 
 .DS_Store
 .vscode/
