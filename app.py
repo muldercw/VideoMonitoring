@@ -46,6 +46,7 @@ class StreamResponse(BaseModel):
     stream_url: str
     stream_type: str
     is_active: bool
+    is_running: Optional[bool] = False
     created_at: datetime
     updated_at: datetime
 
@@ -119,8 +120,27 @@ async def create_stream(stream_data: StreamCreate, db: Session = Depends(get_db)
         if not success:
             logger.warning(f"Failed to initialize stream manager for stream {new_stream.stream_id}")
             # Don't fail the request, just log the warning
+        else:
+            # Automatically start the stream processing
+            start_success = stream_manager.start_stream(new_stream.stream_id)
+            if start_success:
+                logger.info(f"Stream {new_stream.stream_id} started automatically after creation")
+            else:
+                logger.warning(f"Failed to auto-start stream {new_stream.stream_id}")
         
-        return new_stream
+        # Return stream with running status
+        stream_dict = {
+            "stream_id": new_stream.stream_id,
+            "stream_name": new_stream.stream_name,
+            "stream_url": new_stream.stream_url,
+            "stream_type": new_stream.stream_type,
+            "is_active": new_stream.is_active,
+            "is_running": stream_manager.active_streams.get(new_stream.stream_id, {}).get('running', False),
+            "created_at": new_stream.created_at,
+            "updated_at": new_stream.updated_at
+        }
+        
+        return stream_dict
     except HTTPException:
         raise
     except Exception as e:
@@ -132,7 +152,23 @@ async def create_stream(stream_data: StreamCreate, db: Session = Depends(get_db)
 async def get_streams(db: Session = Depends(get_db)):
     try:
         streams = db.query(VideoStream).all()
-        return streams
+        
+        # Add running status from stream manager
+        result = []
+        for stream in streams:
+            stream_dict = {
+                "stream_id": stream.stream_id,
+                "stream_name": stream.stream_name,
+                "stream_url": stream.stream_url,
+                "stream_type": stream.stream_type,
+                "is_active": stream.is_active,
+                "is_running": stream_manager.active_streams.get(stream.stream_id, {}).get('running', False),
+                "created_at": stream.created_at,
+                "updated_at": stream.updated_at
+            }
+            result.append(stream_dict)
+        
+        return result
     except Exception as e:
         logger.error(f"Error fetching streams: {e}")
         raise HTTPException(status_code=500, detail=str(e))
@@ -143,7 +179,20 @@ async def get_stream(stream_id: int, db: Session = Depends(get_db)):
         stream = db.query(VideoStream).filter(VideoStream.stream_id == stream_id).first()
         if not stream:
             raise HTTPException(status_code=404, detail="Stream not found")
-        return stream
+        
+        # Add running status from stream manager
+        stream_dict = {
+            "stream_id": stream.stream_id,
+            "stream_name": stream.stream_name,
+            "stream_url": stream.stream_url,
+            "stream_type": stream.stream_type,
+            "is_active": stream.is_active,
+            "is_running": stream_manager.active_streams.get(stream.stream_id, {}).get('running', False),
+            "created_at": stream.created_at,
+            "updated_at": stream.updated_at
+        }
+        
+        return stream_dict
     except HTTPException:
         raise
     except Exception as e:
@@ -192,16 +241,50 @@ async def delete_stream(stream_id: int, db: Session = Depends(get_db)):
         # Remove from stream manager
         stream_manager.remove_stream(stream_id)
         
-        # Update database
+        # Get all events for this stream to find associated files
+        events = db.query(VideoEvent).filter(VideoEvent.stream_id == stream_id).all()
+        
+        # Delete associated files
+        deleted_files = {"frames": 0, "clips": 0}
+        for event in events:
+            # Delete frame files
+            if event.frame_path and os.path.exists(event.frame_path):
+                try:
+                    os.remove(event.frame_path)
+                    deleted_files["frames"] += 1
+                except Exception as e:
+                    logger.warning(f"Failed to delete frame file {event.frame_path}: {e}")
+            
+            # Delete clip files
+            if event.clip_path and os.path.exists(event.clip_path):
+                try:
+                    os.remove(event.clip_path)
+                    deleted_files["clips"] += 1
+                except Exception as e:
+                    logger.warning(f"Failed to delete clip file {event.clip_path}: {e}")
+        
+        # Delete database entries
+        # Delete events first (foreign key constraint)
+        db.query(VideoEvent).filter(VideoEvent.stream_id == stream_id).delete()
+        
+        # Delete analytics
+        db.query(VideoAnalytics).filter(VideoAnalytics.stream_id == stream_id).delete()
+        
+        # Delete stream
         stream = db.query(VideoStream).filter(VideoStream.stream_id == stream_id).first()
         if stream:
-            stream.is_active = False
-            stream.updated_at = datetime.utcnow()
-            db.commit()
+            db.delete(stream)
         
-        return {"message": f"Stream {stream_id} deleted successfully"}
+        db.commit()
+        
+        logger.info(f"Stream {stream_id} deleted: {deleted_files['frames']} frames, {deleted_files['clips']} clips, and all database entries removed")
+        return {
+            "message": f"Stream {stream_id} deleted successfully",
+            "deleted_files": deleted_files
+        }
     except Exception as e:
         logger.error(f"Error deleting stream {stream_id}: {e}")
+        db.rollback()
         raise HTTPException(status_code=500, detail=str(e))
 
 # Analytics endpoints

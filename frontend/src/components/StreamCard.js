@@ -2,6 +2,7 @@ import React from 'react';
 
 const StreamCard = ({ stream, onStart, onStop, onDelete, onView, onWatch, viewMode, isLoading }) => {
   const isActive = stream.is_active;
+  const isRunning = stream.is_running;
   const streamTypeIcons = {
     rtsp: '📡',
     webcam: '📷',
@@ -24,6 +25,11 @@ const StreamCard = ({ stream, onStart, onStop, onDelete, onView, onWatch, viewMo
               <span className={`status-badge ${isActive ? 'status-active' : 'status-inactive'}`}>
                 {isActive ? 'Active' : 'Inactive'}
               </span>
+              {isActive && (
+                <span className={`status-badge ${isRunning ? 'status-running' : 'status-stopped'}`}>
+                  {isRunning ? '🔴 Processing' : '⏸️ Stopped'}
+                </span>
+              )}
             </div>
           </div>
         </div>
@@ -38,7 +44,7 @@ const StreamCard = ({ stream, onStart, onStop, onDelete, onView, onWatch, viewMo
           >
             📺 Watch
           </button>
-          {isActive ? (
+          {isActive && isRunning ? (
             <button 
               className="btn btn-danger" 
               onClick={onStop}
@@ -46,7 +52,7 @@ const StreamCard = ({ stream, onStart, onStop, onDelete, onView, onWatch, viewMo
             >
               ⏸️ Stop
             </button>
-          ) : (
+          ) : isActive && !isRunning ? (
             <button 
               className="btn btn-success" 
               onClick={onStart}
@@ -54,7 +60,7 @@ const StreamCard = ({ stream, onStart, onStop, onDelete, onView, onWatch, viewMo
             >
               ▶️ Start
             </button>
-          )}
+          ) : null}
           <button 
             className="btn btn-danger" 
             onClick={onDelete}
@@ -77,6 +83,11 @@ const StreamCard = ({ stream, onStart, onStop, onDelete, onView, onWatch, viewMo
           <span className={`status-badge ${isActive ? 'status-active' : 'status-inactive'}`}>
             {isActive ? 'Active' : 'Inactive'}
           </span>
+          {isActive && (
+            <span className={`status-badge ${isRunning ? 'status-running' : 'status-stopped'}`}>
+              {isRunning ? '🔴 Processing' : '⏸️ Stopped'}
+            </span>
+          )}
         </div>
       </div>
       
@@ -101,7 +112,7 @@ const StreamCard = ({ stream, onStart, onStop, onDelete, onView, onWatch, viewMo
           📺 Watch
         </button>
         <div className="action-buttons">
-          {isActive ? (
+          {isActive && isRunning ? (
             <button 
               className="btn btn-danger" 
               onClick={onStop}
@@ -109,7 +120,7 @@ const StreamCard = ({ stream, onStart, onStop, onDelete, onView, onWatch, viewMo
             >
               ⏸️ Stop
             </button>
-          ) : (
+          ) : isActive && !isRunning ? (
             <button 
               className="btn btn-success" 
               onClick={onStart}
@@ -117,7 +128,7 @@ const StreamCard = ({ stream, onStart, onStop, onDelete, onView, onWatch, viewMo
             >
               ▶️ Start
             </button>
-          )}
+          ) : null}
           <button 
             className="btn btn-danger" 
             onClick={onDelete}

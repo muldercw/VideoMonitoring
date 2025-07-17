@@ -72,16 +72,7 @@ class StreamManager:
                     self.processors[stream_id].release()
                     del self.processors[stream_id]
                 
-                # Update database
-                db = SessionLocal()
-                stream = db.query(VideoStream).filter(VideoStream.stream_id == stream_id).first()
-                if stream:
-                    stream.is_active = False
-                    stream.updated_at = datetime.utcnow()
-                    db.commit()
-                db.close()
-                
-                logger.info(f"Stream {stream_id} removed successfully")
+                logger.info(f"Stream {stream_id} removed from manager successfully")
                 return True
             return False
         except Exception as e:

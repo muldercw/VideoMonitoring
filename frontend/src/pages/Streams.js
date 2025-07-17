@@ -43,11 +43,16 @@ const Streams = () => {
   };
 
   const handleDeleteStream = async (streamId) => {
-    if (window.confirm('Are you sure you want to delete this stream?')) {
+    const streamToDelete = streams?.find(s => s.stream_id === streamId);
+    const confirmMessage = `Are you sure you want to delete "${streamToDelete?.stream_name}"?\n\nThis will permanently remove:\n• The stream configuration\n• All recorded events and analytics\n• All associated frame and clip files\n\nThis action cannot be undone.`;
+    
+    if (window.confirm(confirmMessage)) {
       try {
-        await deleteStreamMutation.mutateAsync(streamId);
+        const result = await deleteStreamMutation.mutateAsync(streamId);
+        console.log('Stream deleted:', result);
       } catch (error) {
         console.error('Failed to delete stream:', error);
+        alert('Failed to delete stream. Please try again.');
       }
     }
   };

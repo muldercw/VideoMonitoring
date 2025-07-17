@@ -162,6 +162,11 @@ body {
   color: #0c5460;
 }
 
+.status-stopped {
+  background-color: #fff3cd;
+  color: #856404;
+}
+
 .grid {
   display: grid;
   gap: 20px;
